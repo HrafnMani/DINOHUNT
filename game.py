@@ -5,6 +5,9 @@ from pygame.locals import (
     QUIT,
     MOUSEBUTTONDOWN,
 )
+from random import randint
+
+from state import State
 
 from world import World
 from menu import Menu
@@ -15,30 +18,27 @@ from overlay import Overlay
 
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, state:State) -> None:
         """_summary_
         All constants and variables created, assets should be loaded here and the game created
         """
-        # Game Constants
-        self._WIDTH, self._HEIGHT = 1200, 800
+        self.state = state
+        
         self._GRIDS = 8
-
-        self.FPS = 30
 
         # Game variables
         self._isOver = False
         self.game_state = ""
-        self.total_loot = {
-            "gold": 0,
-            "bone": 0,
-        }
 
         # OTHER VARIABLES
         self.button_press = None
 
         # Creating the game instant
         pygame.init()
-        self.screen = pygame.display.set_mode((self._WIDTH, self._HEIGHT))
+    
+        screen = pygame.display.set_mode((self.state.screen_width, self.state.screen_height))
+        self.state.screen = screen
+        
         self._clock = pygame.time.Clock()
         pygame.display.set_caption('DINOHUNT')
 
@@ -51,7 +51,19 @@ class Game:
 
     def tick(self):
         # EVENT HANDLING
-        for event in pygame.event.get():
+        self.state.events = pygame.event.get()
+        self.state.pressed_keys = pygame.key.get_pressed()
+        
+        self.state.pressed_btn_last = self.state.pressed_btn
+        self.state.pressed_btn = pygame.mouse.get_pressed()
+        if not (self.state.pressed_btn_last is None or self.state.pressed_btn is None):
+            ls = []
+            for last_btn, cur_btn in zip( list(self.state.pressed_btn_last), list(self.state.pressed_btn)):
+                ls.append((not last_btn == cur_btn) and (last_btn == False))
+            self.state.btn_down = tuple(ls)
+        
+        
+        for event in self.state.events:
             if event.type == KEYDOWN:
                 # Can press escape to enter menu
                 if event.key == K_ESCAPE:
@@ -61,9 +73,9 @@ class Game:
                 self._isOver = True
             
             if event.type == MOUSEBUTTONDOWN:
-                self.button_press = event
+                self.state.button_press = event
             else:
-                self.button_press = None
+                self.state.button_press = None
 
         # The unique states the game can take
         if self.game_state == "menu":
@@ -76,58 +88,56 @@ class Game:
             self.dig_tick()
 
         pygame.display.flip()
-        self._clock.tick(self.FPS)
+        self._clock.tick(self.state.fps)
 
 
     def dig_tick(self):
-        pressed_keys = pygame.key.get_pressed()
-
         # UPDATING
         if self._player.can_dig():
-            self._player.update(pressed_keys)
+            self._player.update()
         self._player.set_pos(self._world.cell_center(self._player.get_grid_pos()))
-
+        
         if self._player.will_dig() and self._world.can_dig(self._player.get_grid_pos()):
             loot = self._world.dig(self._player.get_grid_pos())
             self._player.dig(loot)
             self.dig_loot(loot)
 
         # DRAWING
-        self._world.draw(self.screen)
-        self._player.draw(self.screen)
+        self._world.draw()
+        self._player.draw()
 
         # Overlays
-        Overlay(f"Shovels: {self._player.remaining_shovels()}", self._WIDTH-100, 35, self.main_font).draw(self.screen)
-        Overlay(f"Bones: {self._player.loot_found('bone')}", 75, 35, self.main_font).draw(self.screen)
-        Overlay(f"Gold: {self._player.loot_found('gold')}", 230, 35, self.main_font).draw(self.screen)
+        Overlay(f"Shovels: {self._player.remaining_shovels()}", self.state.screen_width-100, 35, self.main_font).draw(self.state.screen)
+        Overlay(f"Bones: {self._player.loot_found('bone')}", 75, 35, self.main_font).draw(self.state.screen)
+        Overlay(f"Gold: {self._player.loot_found('gold')}", 230, 35, self.main_font).draw(self.state.screen)
 
         if not self._player.can_dig():
-            self._world.draw_go(self.screen, self._player._loot_found)
-            if self._world.can_change() and any(pressed_keys):
+            self._world.draw_go()
+            if self._world.can_change() and (any(self.state.pressed_keys) or any(self.state.pressed_btn)):
                 self.set_state(self._world.next_state())
 
 
     def dig_loot(self, loot: Loot) -> None:
         if loot is None:
             return
-        if loot.type == "gold" or loot.type == "bone":
-            self.total_loot[loot.type] += 1
+        if loot.type in self.state.total_loot.keys():
+            self.state.total_loot[loot.type] += 1
 
 
     def menu_tick(self):
-        self._menu.check_press(self.button_press)
+        self._menu.check_press()
         if self._menu.can_change():
             self.set_state(self._menu.next_state())
             return
-        self._menu.draw(self.screen)
+        self._menu.draw()
         
 
     def office_tick(self):
-        self._office.press(self.button_press)
+        self._office.press()
         if self._office.can_change():
             self.set_state(self._office.next_state())
             return
-        self._office.draw(self.screen, self.total_loot)
+        self._office.draw()
 
 
     def set_state(self, state: str):
@@ -135,29 +145,19 @@ class Game:
 
         if state == "menu":
             self.game_state = "menu"
-            self._menu = Menu()
+            self._menu = Menu(self.state)
         
         elif state == "office":
             self.game_state = "office"
-            self._office = Office(self._WIDTH, self._HEIGHT)
+            self._office = Office(self.state)
 
         elif state == "digging":
             self.game_state = "digging"
+            self.state.dig_site_grid = randint(5,8)
 
-            # Loading entities
-            self.all_entities = pygame.sprite.Group()
-            self.loot_sprites = pygame.sprite.Group()
-
-            self._world = World(
-                    grids=self._GRIDS,
-                    width=self._WIDTH,
-                    height=self._HEIGHT,
-                    loot_group=self.loot_sprites,
-                    ) 
-            self._player = Player(
-                    grids=self._GRIDS
-                    )
-            self.all_entities.add(self._player)
+            self._world = World(self.state) 
+            self._player = Player(self.state)
+            self.state.all_entities.add(self._player)
 
         elif state == "quit":
             self._isOver = True
@@ -173,7 +173,6 @@ class Game:
         elif self.game_state == "digging":
             self._world = None
             self._player.kill()
-            self.loot_sprites.empty()
 
 
     def exit(self):

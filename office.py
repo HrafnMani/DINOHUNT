@@ -1,9 +1,12 @@
 import pygame
 
 from book import Book
+from state import State
 
 class Office:
-    def __init__(self, width: int, height: int) -> None:
+    def __init__(self, state:State) -> None:
+
+        self.state = state
 
         # COLORS
         self._TABLE_COLOR = (92,64,51)
@@ -17,18 +20,18 @@ class Office:
         self._HIGHLIGHT_FONT = pygame.font.SysFont("Comic Sans MS", 50)
 
         # THE TABLE/DESK
-        self.table_surf = pygame.Surface((width, 0.6*height))
+        self.table_surf = pygame.Surface((self.state.screen_width, 0.6*self.state.screen_height))
         self.table_surf.fill(self._TABLE_COLOR)
 
         self.table_rect = self.table_surf.get_rect()
-        self.table_rect.centerx = int(width/2); self.table_rect.centery = int(height/2)
+        self.table_rect.centerx = int(self.state.screen_width/2); self.table_rect.centery = int(self.state.screen_height/2)
 
         # THE MAP WHICH ACTIVATES THE MAIN GAME
         self.map_surf = pygame.Surface((400, 320))
         self.map_surf.fill(self._MAP_COLOR)
 
         self.map_rect = self.map_surf.get_rect()
-        self.map_rect.right = width - 35; self.map_rect.top = self.table_rect.top + 15
+        self.map_rect.right = self.state.screen_width - 35; self.map_rect.top = self.table_rect.top + 15
 
         # THE BOOK WITH DETAILS OF LOOT FOUND
         self.is_book_open = False
@@ -38,7 +41,7 @@ class Office:
         self.book_closed_rect = self.book_closed_surf.get_rect()
         self.book_closed_rect.left = 35; self.book_closed_rect.top = self.table_rect.top + 45
 
-        self.book = Book(width, height)
+        self.book = Book(self.state)
 
         # CLICK TIMEOUT TO ENSURE NOT REPEATED CLICKS ACCIDENTALLY
         self.CLICK_TIMEOUT = 2 # Frames
@@ -50,15 +53,15 @@ class Office:
         self._next = ""
 
 
-    def draw(self, screen: pygame.Surface, loot: dict):
-        screen.fill(self._BG_COLOR)
-        screen.blit(self.table_surf, self.table_rect)
-        screen.blit(self.map_surf, self.map_rect)
+    def draw(self):
+        self.state.screen.fill(self._BG_COLOR)
+        self.state.screen.blit(self.table_surf, self.table_rect)
+        self.state.screen.blit(self.map_surf, self.map_rect)
 
         if not self.is_book_open:
-            screen.blit(self.book_closed_surf, self.book_closed_rect)
+            self.state.screen.blit(self.book_closed_surf, self.book_closed_rect)
         else:
-            self.book.draw(screen)
+            self.book.draw()
         #     gold = loot.get("gold", -1)
         #     bones = loot.get("bone", -1)
 
@@ -89,18 +92,20 @@ class Office:
             
     
 
-    def press(self, event):
+    def press(self):
+        event = self.state.button_press
         if event is None:
             return
-        # Must be left mouse button
-        if not event.button == 1:
+        # Must be left mouse button and must be a current down click
+        if not event.button == 1 or not self.state.btn_down[0]:
             return
         
-        if self.in_click_timeout:
-            self.click_timeout_rem -= 1
-            if self.click_timeout_rem <= 0:
-                self.in_click_timeout = False
-            return
+        # # Respecting click timeout
+        # if self.in_click_timeout:
+        #     self.click_timeout_rem -= 1
+        #     if self.click_timeout_rem <= 0:
+        #         self.in_click_timeout = False
+        #     return
 
         if not self.is_book_open:
             # Check what object is collided with

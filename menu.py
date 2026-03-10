@@ -1,7 +1,11 @@
 import pygame
+from state import State
+
 
 class Menu:
-    def __init__(self) -> None:
+    def __init__(self, state:State) -> None:
+        self.state = state
+        
         # COLORS
         self.WHITE = (255,255,255)
 
@@ -32,17 +36,18 @@ class Menu:
         self.options[i] = (opt, [surf, surf.get_rect()]); i += 1
 
 
-    def draw(self, screen: pygame.Surface):
-        screen.fill((122,94,81))
+    def draw(self):
+        self.state.screen.fill((122,94,81))
 
-        screen.blit(self.title_surf, self.title_rect)
+        self.state.screen.blit(self.title_surf, self.title_rect)
         for i, opt in self.options.items():
             opt = opt[1]
             opt[1].left = 95; opt[1].top = 200 + i * 50
-            screen.blit(opt[0], opt[1])
+            self.state.screen.blit(opt[0], opt[1])
     
 
-    def check_press(self, event):
+    def check_press(self):
+        event = self.state.button_press
         if event is None:
             return
         # Has to be left click!

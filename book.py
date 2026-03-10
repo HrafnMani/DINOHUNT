@@ -1,14 +1,16 @@
 import pygame
 import json
-from math import ceil
+from state import State
 
 PAGES_PATH = "pages.json"
 MAX_CHARS = 20
 
 
 class Book(pygame.sprite.Sprite):
-    def __init__(self, width:int, height:int):
+    def __init__(self, state:State):
         super(Book,self).__init__()
+
+        self.state = state
 
         # Book use variables
         self.selected_page = 0
@@ -21,10 +23,10 @@ class Book(pygame.sprite.Sprite):
         self._BOOK_COVER = (18,225,147)
         
         # Pygame figure for the book simplified
-        self.book_cover_surf = pygame.Surface((int(width*0.8), int(height*0.7)))
+        self.book_cover_surf = pygame.Surface((int(self.state.screen_width*0.8), int(self.state.screen_height*0.7)))
         self.book_cover_surf.fill(self._BOOK_COVER)
         self.book_cover_rect = self.book_cover_surf.get_rect()
-        self.book_cover_rect.centerx = int(width/2); self.book_cover_rect.centery = int(height/2)
+        self.book_cover_rect.centerx = int(self.state.screen_width/2); self.book_cover_rect.centery = int(self.state.screen_height/2)
         
         
         page_size = ((self.book_cover_rect.size[0]-10)/2,self.book_cover_rect.size[1]-20)
@@ -48,17 +50,17 @@ class Book(pygame.sprite.Sprite):
         self.is_open = True
     
     
-    def draw(self, screen:pygame.Surface):
+    def draw(self):
         if not self.is_open:
             self.on_open()
         
-        screen.blit(self.book_cover_surf, self.book_cover_rect)
-        screen.blit(self.pages_left_surf, self.pages_left_rect)
-        screen.blit(self.pages_right_surf, self.pages_right_rect)
+        self.state.screen.blit(self.book_cover_surf, self.book_cover_rect)
+        self.state.screen.blit(self.pages_left_surf, self.pages_left_rect)
+        self.state.screen.blit(self.pages_right_surf, self.pages_right_rect)
 
-        self.pages[ 2 * self.selected_page ].draw(screen, True)
+        self.pages[ 2 * self.selected_page ].draw(self.state.screen, True)
         if 2 * self.selected_page + 1 < len(self.pages):
-            self.pages[ 2 * self.selected_page + 1 ].draw(screen, False)
+            self.pages[ 2 * self.selected_page + 1 ].draw(self.state.screen, False)
     
     
     def on_close(self):
@@ -86,6 +88,8 @@ class Book(pygame.sprite.Sprite):
         # Must be left mouse button
         if not event.button == 1:
             return False
+        
+        print(event.pos)
         
         if self.pages_left_rect.collidepoint(event.pos):
             self.selected_page -= 1

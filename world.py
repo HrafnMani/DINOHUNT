@@ -1,24 +1,25 @@
 import pygame
 from loot import Loot
+from state import State
 
 from random import randint, shuffle
 from time import sleep
 
 class World:
-    def __init__(self, grids, width, height, loot_group) -> None:
+    def __init__(self, state:State) -> None:
         """_summary_
         Load the assets for the world
         """
-        self._NUM_CELLS = grids
-        self._WIDTH, self._HEIGHT = width, height
 
+        self.state = state
+        
         # Variables for placement
         self.PADDING = 40
-        self._cell_len = int( (min(self._WIDTH, self._HEIGHT) - 2 * self.PADDING)/self._NUM_CELLS )
-        self.x_pad = int((self._WIDTH - self._cell_len*self._NUM_CELLS) / 2)
-        self.y_pad = int((self._HEIGHT - self._cell_len*self._NUM_CELLS) / 2)
+        self._cell_len = int( (min(self.state.screen_width, self.state.screen_height) - 2 * self.PADDING)/self.state.dig_site_grid )
+        self.x_pad = int((self.state.screen_width - self._cell_len*self.state.dig_site_grid) / 2)
+        self.y_pad = int((self.state.screen_height - self._cell_len*self.state.dig_site_grid) / 2)
 
-        self.loot_group = loot_group
+        self.loot_group = pygame.sprite.Group()
         
         # WORLD VARIABLES
         self.num_fossils = 0
@@ -57,8 +58,8 @@ class World:
     def create_grid(self) -> dict:
         return {
             (x,y): (False, None)
-            for x in range(self._NUM_CELLS)
-            for y in range(self._NUM_CELLS)
+            for x in range(self.state.dig_site_grid)
+            for y in range(self.state.dig_site_grid)
         }
 
 
@@ -95,8 +96,8 @@ class World:
 
     def place_loot(self, loot: Loot) -> bool:
         valid_roots = []
-        for root_x in range(self._NUM_CELLS):
-            for root_y in range(self._NUM_CELLS):
+        for root_x in range(self.state.dig_site_grid):
+            for root_y in range(self.state.dig_site_grid):
                 valid = True
                 
                 for dx, dy in loot.layout:
@@ -104,7 +105,7 @@ class World:
                     y = root_y + dy
                     
                     # Checking boundaries
-                    if not (0 <= x < self._NUM_CELLS and 0 <= y < self._NUM_CELLS):
+                    if not (0 <= x < self.state.dig_site_grid and 0 <= y < self.state.dig_site_grid):
                         valid = False
                         break
                     # Checking the Grid  
@@ -127,8 +128,8 @@ class World:
         return True
 
 
-    def draw(self, screen: pygame.Surface):
-        screen.fill(self._BG_COLOR)
+    def draw(self):
+        self.state.screen.fill(self._BG_COLOR)
 
         # Filling Each Cell
         for cell, cell_info in self._GRID.items():
@@ -141,56 +142,56 @@ class World:
             # Cell backdrop
             x = cell[0] * self._cell_len + self.x_pad
             y = cell[1] * self._cell_len + self.y_pad
-            pygame.draw.rect(screen,color,(x,y,self._cell_len, self._cell_len),0)
+            pygame.draw.rect(self.state.screen,color,(x,y,self._cell_len, self._cell_len),0)
             # Drawing the loot if the cell is dug and there is loot
             if cell_info[0] and cell_info[1] is not None:
                 rect = cell_info[1].surf.get_rect()
                 rect.centerx, rect.centery = self.cell_center(cell)
-                screen.blit(cell_info[1].surf, rect)
+                self.state.screen.blit(cell_info[1].surf, rect)
 
         # Creating the Grid lines
-        for x in range(self.x_pad,self._WIDTH - self.x_pad + 1, self._cell_len):
-            pygame.draw.line(screen, self._GRID_COLOR, (x,self.y_pad), (x, self._HEIGHT - self.y_pad))
-        for y in range(self.y_pad, self._HEIGHT - self.y_pad + 1, self._cell_len):
-            pygame.draw.line(screen, self._GRID_COLOR, (self.x_pad,y), (self._WIDTH - self.x_pad, y))
+        for x in range(self.x_pad,self.state.screen_width - self.x_pad + 1, self._cell_len):
+            pygame.draw.line(self.state.screen, self._GRID_COLOR, (x,self.y_pad), (x, self.state.screen_height - self.y_pad))
+        for y in range(self.y_pad, self.state.screen_height - self.y_pad + 1, self._cell_len):
+            pygame.draw.line(self.state.screen, self._GRID_COLOR, (self.x_pad,y), (self.state.screen_width - self.x_pad, y))
 
 
-    def draw_go(self, screen: pygame.Surface, loot: dict):
+    def draw_go(self):
         all_tiles = list(self._GRID.keys())
         if self.go_counter < len(all_tiles):
             self._GRID[all_tiles[self.go_counter]] = (True, self._GRID[all_tiles[self.go_counter]][1]) 
         self.go_counter += 1
         if self.go_counter > 0:
             # Setting a dark screen over the game
-            shade_surf = pygame.Surface((self._WIDTH, self._HEIGHT)).convert_alpha()
+            shade_surf = pygame.Surface((self.state.screen_width, self.state.screen_height)).convert_alpha()
             shade_surf.fill((0,0,0,128))
-            screen.blit(shade_surf, (0,0))
+            self.state.screen.blit(shade_surf, (0,0))
 
         if self.go_counter > 1:
             go_font_surf = self.GO_FONT.render("GAME OVER", True, self._WHITE)
             go_font_rect = go_font_surf.get_rect()
-            go_font_rect.centerx = int(self._WIDTH/2); go_font_rect.centery = 200
-            screen.blit(go_font_surf, go_font_rect)
+            go_font_rect.centerx = int(self.state.screen_width/2); go_font_rect.centery = 200
+            self.state.screen.blit(go_font_surf, go_font_rect)
 
         if self.go_counter > 2:
             go_font_surf = self.GO_DET_FONT.render("Results:", True, self._WHITE)
             go_font_rect = go_font_surf.get_rect()
-            go_font_rect.centerx = int(self._WIDTH/2); go_font_rect.centery = 270
-            screen.blit(go_font_surf, go_font_rect)
+            go_font_rect.centerx = int(self.state.screen_width/2); go_font_rect.centery = 270
+            self.state.screen.blit(go_font_surf, go_font_rect)
             
         if self.go_counter > 3:
-            fossils = loot.get("bone", -1)
+            fossils = self.state.dig_site_loot.get("bone", -1)
             go_font_surf = self.GO_DET_FONT.render(f"Fossils: {fossils} out of {self.num_fossils}", True, self._WHITE)
             go_font_rect = go_font_surf.get_rect()
-            go_font_rect.centerx = int(self._WIDTH/2); go_font_rect.centery = 320
-            screen.blit(go_font_surf, go_font_rect)
+            go_font_rect.centerx = int(self.state.screen_width/2); go_font_rect.centery = 320
+            self.state.screen.blit(go_font_surf, go_font_rect)
 
         if self.go_counter > 4:
-            gold = loot.get("gold", -1)
+            gold = self.state.dig_site_loot.get("gold", -1)
             go_font_surf = self.GO_DET_FONT.render(f"Gold: {gold} out of {self.num_gold}", True, self._WHITE)
             go_font_rect = go_font_surf.get_rect()
-            go_font_rect.centerx = int(self._WIDTH/2); go_font_rect.centery = 360
-            screen.blit(go_font_surf, go_font_rect)
+            go_font_rect.centerx = int(self.state.screen_width/2); go_font_rect.centery = 360
+            self.state.screen.blit(go_font_surf, go_font_rect)
 
         if self.go_counter > 5:
             self._can_change = True

@@ -7,14 +7,14 @@ from pygame.locals import (
     K_SPACE,
 )
 from loot import Loot
-from overlay import Overlay
+from state import State
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, grids) -> None:
+    def __init__(self, state:State) -> None:
         super(Player,self).__init__()
 
-        self._GRIDS = grids
+        self.state = state
         self._pos = (0,0)
 
         # Cooldown period of 15frames or 0.5ss
@@ -39,7 +39,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
     
 
-    def update(self, pressed_key) -> None:
+    def update(self) -> None:
         """_summary_
         Updates the grid position of the player and any other action performed by player
         Does NOT draw the player or determine the x,y (player is passed into world and changed there)!
@@ -56,36 +56,35 @@ class Player(pygame.sprite.Sprite):
             return
 
         # Update grid position
-        if pressed_key[K_UP]:
+        if self.state.pressed_keys[K_UP]:
             self._pos = (self._pos[0], self._pos[1] - 1)
             self.in_cooldown = True
-        if pressed_key[K_DOWN]:
+        if self.state.pressed_keys[K_DOWN]:
             self._pos = (self._pos[0], self._pos[1] + 1)
             self.in_cooldown = True
-        if pressed_key[K_LEFT]:
+        if self.state.pressed_keys[K_LEFT]:
             self._pos = (self._pos[0] - 1, self._pos[1])
             self.in_cooldown = True
-        if pressed_key[K_RIGHT]:
+        if self.state.pressed_keys[K_RIGHT]:
             self._pos = (self._pos[0] + 1, self._pos[1])
             self.in_cooldown = True
-        if pressed_key[K_SPACE]:
+        if self.state.pressed_keys[K_SPACE]:
             self._wants_dig = True
         else: self._wants_dig = False
 
-        
         # Ensure valid position
         if self._pos[0] < 0:
             self._pos = (0, self._pos[1])
-        if self._pos[0] >= self._GRIDS:
-            self._pos = (self._GRIDS-1, self._pos[1])
+        if self._pos[0] >= self.state.dig_site_grid:
+            self._pos = (self.state.dig_site_grid-1, self._pos[1])
         if self._pos[1] < 0:
             self._pos = (self._pos[0], 0)
-        if self._pos[1] >= self._GRIDS:
-            self._pos = (self._pos[0], self._GRIDS-1)
+        if self._pos[1] >= self.state.dig_site_grid:
+            self._pos = (self._pos[0], self.state.dig_site_grid-1)
 
 
-    def draw(self, screen: pygame.Surface):
-        screen.blit(self.surf, self.rect)
+    def draw(self,):
+        self.state.screen.blit(self.surf, self.rect)
 
 
     def get_grid_pos(self):
@@ -118,6 +117,7 @@ class Player(pygame.sprite.Sprite):
         elif loot.type == "shovel":
             self._remaining_digs += 1
         
+        self.state.dig_site_loot = self._loot_found
         # print(f"I dug and found {loot.type}")
 
 
