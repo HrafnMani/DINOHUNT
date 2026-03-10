@@ -20,7 +20,7 @@ class Game:
         All constants and variables created, assets should be loaded here and the game created
         """
         # Game Constants
-        self._WIDTH, self._HEIGHT = 800, 800
+        self._WIDTH, self._HEIGHT = 1200, 800
         self._GRIDS = 8
 
         self.FPS = 30
@@ -46,7 +46,7 @@ class Game:
         pygame.font.init()
         self.main_font = pygame.font.SysFont('Comic Sans MS', 30)
 
-        self.set_state("menu")
+        self.set_state("digging")
     
 
     def tick(self):
@@ -98,8 +98,8 @@ class Game:
 
         # Overlays
         Overlay(f"Shovels: {self._player.remaining_shovels()}", self._WIDTH-100, 35, self.main_font).draw(self.screen)
-        Overlay(f"Bones: {self._player.loot_found("bone")}", 75, 35, self.main_font).draw(self.screen)
-        Overlay(f"Gold: {self._player.loot_found("gold")}", 230, 35, self.main_font).draw(self.screen)
+        Overlay(f"Bones: {self._player.loot_found('bone')}", 75, 35, self.main_font).draw(self.screen)
+        Overlay(f"Gold: {self._player.loot_found('gold')}", 230, 35, self.main_font).draw(self.screen)
 
         if not self._player.can_dig():
             self._world.draw_go(self.screen, self._player._loot_found)

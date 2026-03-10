@@ -118,8 +118,8 @@ class Player(pygame.sprite.Sprite):
         elif loot.type == "shovel":
             self._remaining_digs += 1
         
-        print(f"I dug and found {loot.type}")
-    
+        # print(f"I dug and found {loot.type}")
+
 
     def remaining_shovels(self):
         return self._remaining_digs

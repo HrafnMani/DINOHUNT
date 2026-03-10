@@ -1,7 +1,7 @@
 import pygame
 from loot import Loot
 
-from random import randint
+from random import randint, shuffle
 from time import sleep
 
 class World:
@@ -14,14 +14,15 @@ class World:
 
         self.PADDING = 40
 
-        self._cell_width = int( (self._WIDTH - 2* self.PADDING)/self._NUM_CELLS )
-        self._cell_height = int( (self._HEIGHT - 2* self.PADDING)/self._NUM_CELLS )
+        self._cell_len = int( (min(self._WIDTH, self._HEIGHT) - 2* self.PADDING)/self._NUM_CELLS )
 
         self.loot_group = loot_group
         
         # WORLD VARIABLES
         self.num_fossils = 0
         self.num_gold = 0
+        self.num_rocks = 0
+        self.num_shovels = 0
 
         # Probabilities of loot as its unique number
         self._BONE_CHANCE = 10
@@ -31,6 +32,7 @@ class World:
 
         # GRID countains the coordinate and whether it has been dug or not and its loot
         self._GRID = self.create_grid()
+        self.create_loot()
 
         # Colors used
         self._UNDUG_COLOR = (196,164,132)
@@ -49,32 +51,78 @@ class World:
         self._next = ""
         self._can_change = False
 
-    
+
     def create_grid(self) -> dict:
-        # TODO Separate the creation of the grid from the initialisation of loot
-        # TODO Want to create multi tile loot (larger rocks and fossils)
-        grid = {}
-        for x in range(self._NUM_CELLS):
-            for y in range(self._NUM_CELLS):
-                centerx,centery = self.cell_center((x,y))
-                loot = None
-                randi = randint(0,100)
-                if randi < self._BONE_CHANCE:
-                    loot = Loot("bone",centerx,centery)
-                    self.loot_group.add(loot)
-                    self.num_fossils += 1
-                elif randi < self._ROCK_CHANCE:
-                    loot = Loot("rock",centerx,centery)
-                    self.loot_group.add(loot)
-                elif randi < self._GOLD_CHANCE:
-                    loot = Loot("gold",centerx,centery)
-                    self.loot_group.add(loot)
-                    self.num_gold += 1
-                elif randi < self._SHOVEL_CHANCE:
-                    loot = Loot("shovel",centerx,centery)
-                    self.loot_group.add(loot)
-                grid[(x,y)] = (False, loot)
-        return grid
+        return {
+            (x,y): (False, None)
+            for x in range(self._NUM_CELLS)
+            for y in range(self._NUM_CELLS)
+        }
+
+
+    def create_loot(self):
+        fossil_target = randint(3, 10)
+        gold_target = randint(0,6)
+        rock_target = randint(2,4)
+        shovel_target = randint(0,4)
+
+        while self.num_fossils < fossil_target:
+            loot = Loot(type="bone")
+            if not self.place_loot(loot):
+                break
+            self.num_fossils += loot.size
+             
+        while self.num_rocks < rock_target:
+            loot = Loot(type="rock")
+            if not self.place_loot(loot):
+                break
+            self.num_rocks += loot.size
+                
+        while self.num_gold < gold_target:
+            loot = Loot(type="gold")
+            if not self.place_loot(loot):
+                break
+            self.num_gold += loot.size
+             
+        while self.num_shovels < shovel_target:
+            loot = Loot(type="shovel")
+            if not self.place_loot(loot):
+                break
+            self.num_shovels += loot.size
+
+
+    def place_loot(self, loot: Loot) -> bool:
+        valid_roots = []
+        for root_x in range(self._NUM_CELLS):
+            for root_y in range(self._NUM_CELLS):
+                valid = True
+                
+                for dx, dy in loot.layout:
+                    x = root_x + dx
+                    y = root_y + dy
+                    
+                    # Checking boundaries
+                    if not (0 <= x < self._NUM_CELLS and 0 <= y < self._NUM_CELLS):
+                        valid = False
+                        break
+                    # Checking the Grid  
+                    if self._GRID[(x,y)][0]:
+                        valid = False
+                        break
+                if valid:
+                    valid_roots.append((root_x,root_y))
+        
+        if not valid_roots:
+            return False
+        
+        shuffle(valid_roots)
+        root_x, root_y = valid_roots[0]
+        for dx,dy in loot.layout:
+            x = root_x + dx
+            y = root_y + dy
+            self._GRID[(x,y)] = (False, loot)
+        
+        return True
 
 
     def draw(self, screen: pygame.Surface):
@@ -87,19 +135,21 @@ class World:
             else:
                 color = self._UNDUG_COLOR
             
-            x = cell[0] * self._cell_width + self.PADDING
-            y = cell[1] * self._cell_height + self.PADDING
-            pygame.draw.rect(screen,color,(x,y,self._cell_width, self._cell_height),0)
+            x = cell[0] * self._cell_len + self.PADDING
+            y = cell[1] * self._cell_len + self.PADDING
+            pygame.draw.rect(screen,color,(x,y,self._cell_len, self._cell_len),0)
             if cell_info[0] and cell_info[1] is not None:
-                screen.blit(cell_info[1].surf, cell_info[1].rect)
+                rect = cell_info[1].surf.get_rect()
+                rect.centerx, rect.centery = self.cell_center(cell)
+                screen.blit(cell_info[1].surf, rect)
 
         # Creating the Grid lines
-        for x in range(self.PADDING,self._WIDTH - self.PADDING + 1, self._cell_width):
+        for x in range(self.PADDING,self._WIDTH - self.PADDING + 1, self._cell_len):
             pygame.draw.line(screen, self._GRID_COLOR, (x,self.PADDING), (x, self._HEIGHT - self.PADDING))
-        for y in range(self.PADDING, self._HEIGHT - self.PADDING + 1, self._cell_height):
+        for y in range(self.PADDING, self._HEIGHT - self.PADDING + 1, self._cell_len):
             pygame.draw.line(screen, self._GRID_COLOR, (self.PADDING,y), (self._WIDTH - self.PADDING, y))
-        
-    
+
+
     def draw_go(self, screen: pygame.Surface, loot: dict):
         self.go_counter += 1
         if self.go_counter > 0:
@@ -138,12 +188,13 @@ class World:
             self._can_change = True
             self._next = "office"
         
-        sleep(self.timer)
+        if self.go_counter < 6:
+            sleep(self.timer)
 
 
     def cell_center(self, coord: tuple):
-        x = coord[0] * self._cell_width + self._cell_width / 2 + self.PADDING
-        y = coord[1] * self._cell_height + self._cell_height / 2 + self.PADDING
+        x = coord[0] * self._cell_len + self._cell_len / 2 + self.PADDING
+        y = coord[1] * self._cell_len + self._cell_len / 2 + self.PADDING
 
         return (x,y)
 
