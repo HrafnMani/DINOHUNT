@@ -46,7 +46,7 @@ class Game:
         pygame.font.init()
         self.main_font = pygame.font.SysFont('Comic Sans MS', 30)
 
-        self.set_state("digging")
+        self.set_state("menu")
     
 
     def tick(self):

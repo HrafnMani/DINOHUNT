@@ -12,9 +12,11 @@ class World:
         self._NUM_CELLS = grids
         self._WIDTH, self._HEIGHT = width, height
 
+        # Variables for placement
         self.PADDING = 40
-
-        self._cell_len = int( (min(self._WIDTH, self._HEIGHT) - 2* self.PADDING)/self._NUM_CELLS )
+        self._cell_len = int( (min(self._WIDTH, self._HEIGHT) - 2 * self.PADDING)/self._NUM_CELLS )
+        self.x_pad = int((self._WIDTH - self._cell_len*self._NUM_CELLS) / 2)
+        self.y_pad = int((self._HEIGHT - self._cell_len*self._NUM_CELLS) / 2)
 
         self.loot_group = loot_group
         
@@ -130,24 +132,27 @@ class World:
 
         # Filling Each Cell
         for cell, cell_info in self._GRID.items():
+            # Checking if the cell has been Dug
             if cell_info[0]:
                 color = self._DUG_COLOR
             else:
                 color = self._UNDUG_COLOR
             
-            x = cell[0] * self._cell_len + self.PADDING
-            y = cell[1] * self._cell_len + self.PADDING
+            # Cell backdrop
+            x = cell[0] * self._cell_len + self.x_pad
+            y = cell[1] * self._cell_len + self.y_pad
             pygame.draw.rect(screen,color,(x,y,self._cell_len, self._cell_len),0)
+            # Drawing the loot if the cell is dug and there is loot
             if cell_info[0] and cell_info[1] is not None:
                 rect = cell_info[1].surf.get_rect()
                 rect.centerx, rect.centery = self.cell_center(cell)
                 screen.blit(cell_info[1].surf, rect)
 
         # Creating the Grid lines
-        for x in range(self.PADDING,self._WIDTH - self.PADDING + 1, self._cell_len):
-            pygame.draw.line(screen, self._GRID_COLOR, (x,self.PADDING), (x, self._HEIGHT - self.PADDING))
-        for y in range(self.PADDING, self._HEIGHT - self.PADDING + 1, self._cell_len):
-            pygame.draw.line(screen, self._GRID_COLOR, (self.PADDING,y), (self._WIDTH - self.PADDING, y))
+        for x in range(self.x_pad,self._WIDTH - self.x_pad + 1, self._cell_len):
+            pygame.draw.line(screen, self._GRID_COLOR, (x,self.y_pad), (x, self._HEIGHT - self.y_pad))
+        for y in range(self.y_pad, self._HEIGHT - self.y_pad + 1, self._cell_len):
+            pygame.draw.line(screen, self._GRID_COLOR, (self.x_pad,y), (self._WIDTH - self.x_pad, y))
 
 
     def draw_go(self, screen: pygame.Surface, loot: dict):
@@ -193,8 +198,8 @@ class World:
 
 
     def cell_center(self, coord: tuple):
-        x = coord[0] * self._cell_len + self._cell_len / 2 + self.PADDING
-        y = coord[1] * self._cell_len + self._cell_len / 2 + self.PADDING
+        x = coord[0] * self._cell_len + self.x_pad + self._cell_len / 2
+        y = coord[1] * self._cell_len + self.y_pad + self._cell_len / 2
 
         return (x,y)
 
