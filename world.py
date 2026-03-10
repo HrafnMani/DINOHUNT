@@ -156,6 +156,9 @@ class World:
 
 
     def draw_go(self, screen: pygame.Surface, loot: dict):
+        all_tiles = list(self._GRID.keys())
+        if self.go_counter < len(all_tiles):
+            self._GRID[all_tiles[self.go_counter]] = (True, self._GRID[all_tiles[self.go_counter]][1]) 
         self.go_counter += 1
         if self.go_counter > 0:
             # Setting a dark screen over the game

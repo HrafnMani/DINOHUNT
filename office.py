@@ -1,5 +1,7 @@
 import pygame
 
+from book import Book
+
 class Office:
     def __init__(self, width: int, height: int) -> None:
 
@@ -36,11 +38,7 @@ class Office:
         self.book_closed_rect = self.book_closed_surf.get_rect()
         self.book_closed_rect.left = 35; self.book_closed_rect.top = self.table_rect.top + 45
 
-        self.book_open_surf = pygame.Surface((int(width*0.8), int(height*0.7)))
-        self.book_open_surf.fill(self._MAP_COLOR)
-
-        self.book_open_rect = self.book_open_surf.get_rect()
-        self.book_open_rect.centerx = int(width/2); self.book_open_rect.centery = int(height/2)
+        self.book = Book(width, height)
 
         # CLICK TIMEOUT TO ENSURE NOT REPEATED CLICKS ACCIDENTALLY
         self.CLICK_TIMEOUT = 2 # Frames
@@ -60,33 +58,34 @@ class Office:
         if not self.is_book_open:
             screen.blit(self.book_closed_surf, self.book_closed_rect)
         else:
-            gold = loot.get("gold", -1)
-            bones = loot.get("bone", -1)
+            self.book.draw(screen)
+        #     gold = loot.get("gold", -1)
+        #     bones = loot.get("bone", -1)
 
-            screen.blit(self.book_open_surf, self.book_open_rect)
+        #     screen.blit(self.book_open_surf, self.book_open_rect)
 
-            title_y = 200; count_y = 300
-            gold_pos_x = 200; bone_pos_x = 500
+        #     title_y = 200; count_y = 300
+        #     gold_pos_x = 200; bone_pos_x = 500
 
-            gold_surf = self._DESC_FONT.render("Gold", True, self._BLACK)
-            gold_rect = gold_surf.get_rect()
-            gold_rect.centerx = gold_pos_x; gold_rect.centery = title_y
-            screen.blit(gold_surf, gold_rect)
+        #     gold_surf = self._DESC_FONT.render("Gold", True, self._BLACK)
+        #     gold_rect = gold_surf.get_rect()
+        #     gold_rect.centerx = gold_pos_x; gold_rect.centery = title_y
+        #     screen.blit(gold_surf, gold_rect)
 
-            gold_surf = self._HIGHLIGHT_FONT.render(f"{gold}", True, self._BLACK)
-            gold_rect = gold_surf.get_rect()
-            gold_rect.centerx = gold_pos_x; gold_rect.centery = count_y
-            screen.blit(gold_surf, gold_rect)
+        #     gold_surf = self._HIGHLIGHT_FONT.render(f"{gold}", True, self._BLACK)
+        #     gold_rect = gold_surf.get_rect()
+        #     gold_rect.centerx = gold_pos_x; gold_rect.centery = count_y
+        #     screen.blit(gold_surf, gold_rect)
 
-            bone_surf = self._DESC_FONT.render("Fossils", True, self._BLACK)
-            bone_rect = bone_surf.get_rect()
-            bone_rect.centerx = bone_pos_x; bone_rect.centery = title_y
-            screen.blit(bone_surf, bone_rect)
+        #     bone_surf = self._DESC_FONT.render("Fossils", True, self._BLACK)
+        #     bone_rect = bone_surf.get_rect()
+        #     bone_rect.centerx = bone_pos_x; bone_rect.centery = title_y
+        #     screen.blit(bone_surf, bone_rect)
 
-            bone_surf = self._HIGHLIGHT_FONT.render(f"{bones}", True, self._BLACK)
-            bone_rect = bone_surf.get_rect()
-            bone_rect.centerx = bone_pos_x; bone_rect.centery = count_y
-            screen.blit(bone_surf, bone_rect)
+        #     bone_surf = self._HIGHLIGHT_FONT.render(f"{bones}", True, self._BLACK)
+        #     bone_rect = bone_surf.get_rect()
+        #     bone_rect.centerx = bone_pos_x; bone_rect.centery = count_y
+        #     screen.blit(bone_surf, bone_rect)
             
     
 
@@ -113,7 +112,7 @@ class Office:
                 self.is_book_open = True
         
         else:
-            if not self.book_open_rect.collidepoint(event.pos):
+            if self.book.on_press(event):
                 self.is_book_open = False
             
         self.in_click_timeout = True
